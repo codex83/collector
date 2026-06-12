@@ -1,0 +1,1639 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Collector">
+  <meta name="theme-color" content="#080810">
+  <title>Collector</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #080810;
+      --surface: #0f0f1a;
+      --surface2: #1a1a2e;
+      --border: #2a2a3e;
+      --text: #e8e0d0;
+      --muted: #888;
+      --dim: #444;
+      --dimmer: #2a2a3e;
+      --gold: #C9A96E;
+      --antique: #B5956A;
+      --other: #8899AA;
+      --teal: #7EB8A4;
+      --red: #E07B6A;
+      --font-serif: 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+    }
+
+    html,
+    body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-serif);
+      overflow: hidden;
+    }
+
+    #app {
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* scrollbars */
+    ::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--surface);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 2px;
+    }
+
+    /* header */
+    .header {
+      padding: 16px 20px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .header h1 {
+      font-size: 22px;
+      font-weight: 400;
+      letter-spacing: 2px;
+    }
+
+    .header h1 span {
+      color: var(--gold);
+    }
+
+    .header p {
+      color: var(--dim);
+      font-size: 10px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    .add-btn {
+      background: var(--gold);
+      border: none;
+      border-radius: 50%;
+      width: 46px;
+      height: 46px;
+      font-size: 24px;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(201, 169, 110, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* tabs */
+    .tabs {
+      display: flex;
+      padding: 14px 20px 0;
+      flex-shrink: 0;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 10px;
+      background: none;
+      border: none;
+      border-bottom: 2px solid var(--border);
+      color: var(--dim);
+      cursor: pointer;
+      font-size: 12px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      font-family: var(--font-serif);
+      transition: all 0.2s;
+    }
+
+    .tab.active {
+      border-bottom-color: var(--gold);
+      color: var(--gold);
+    }
+
+    /* content */
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 20px;
+      min-height: 0;
+    }
+
+    .map-content {
+      flex: 1;
+      min-height: 0;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* search + filters */
+    .search {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: var(--font-serif);
+      margin-bottom: 12px;
+      outline: none;
+    }
+
+    .search:focus {
+      border-color: var(--gold);
+    }
+
+    .filters {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+      margin-bottom: 16px;
+      scrollbar-width: none;
+    }
+
+    .filters::-webkit-scrollbar {
+      display: none;
+    }
+
+    .filter-btn {
+      white-space: nowrap;
+      padding: 5px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--dim);
+      cursor: pointer;
+      font-size: 12px;
+      font-family: var(--font-serif);
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+
+    /* grid */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+      gap: 12px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--surface2);
+      border-radius: 12px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+    }
+
+    .card-img {
+      aspect-ratio: 1;
+      background: #050510;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+      font-size: 40px;
+    }
+
+    .card-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .dual-badge {
+      position: absolute;
+      bottom: 5px;
+      right: 5px;
+      background: rgba(126, 184, 164, 0.9);
+      border-radius: 4px;
+      padding: 2px 5px;
+      font-size: 9px;
+      color: #0f0f1a;
+      font-weight: 700;
+    }
+
+    .queue-badge {
+      position: absolute;
+      top: 5px;
+      left: 5px;
+      background: rgba(224, 123, 106, 0.9);
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 9px;
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .card-info {
+      padding: 10px;
+    }
+
+    .card-cat {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 3px;
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--text);
+    }
+
+    .card-brand {
+      font-size: 11px;
+      color: var(--dim);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* empty state */
+    .empty {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 60px 20px;
+    }
+
+    .empty-icon {
+      font-size: 60px;
+      color: var(--dimmer);
+    }
+
+    .empty p {
+      color: var(--dim);
+      font-size: 14px;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    /* map no-location notice */
+    .map-notice {
+      padding: 14px 20px;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+    }
+
+    /* modal backdrop */
+    .modal-bg {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.88);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .modal-bg.bottom {
+      align-items: flex-end;
+    }
+
+    /* modal box */
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 480px;
+      max-height: 92dvh;
+      overflow-y: auto;
+      padding: 24px;
+      position: relative;
+    }
+
+    .modal.sheet {
+      border-radius: 20px 20px 0 0;
+      max-width: 560px;
+      max-height: 88dvh;
+    }
+
+    .modal-handle {
+      width: 40px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin: 0 auto 20px;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: none;
+      border: none;
+      color: var(--dim);
+      cursor: pointer;
+      font-size: 20px;
+      line-height: 1;
+    }
+
+    .modal h2 {
+      font-size: 20px;
+      font-weight: 400;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .modal .subtitle {
+      color: var(--dim);
+      font-size: 13px;
+      margin-bottom: 20px;
+    }
+
+    /* form elements */
+    label.field-label {
+      display: block;
+      color: var(--dim);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+      margin-top: 12px;
+    }
+
+    input.field,
+    textarea.field {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 10px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: var(--font-serif);
+      outline: none;
+    }
+
+    input.field:focus,
+    textarea.field:focus {
+      border-color: var(--gold);
+    }
+
+    textarea.field {
+      resize: vertical;
+    }
+
+    /* category pills */
+    .cat-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .cat-pill {
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--dim);
+      cursor: pointer;
+      font-size: 12px;
+      font-family: var(--font-serif);
+      transition: all 0.2s;
+    }
+
+    /* image slots */
+    .slots {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .slot {
+      flex: 1;
+    }
+
+    .slot-label {
+      color: var(--dim);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+    }
+
+    .slot-btn {
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 10px;
+      border: 2px dashed var(--border);
+      background: transparent;
+      color: var(--dim);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 11px;
+      font-family: var(--font-serif);
+      text-align: center;
+      line-height: 1.4;
+      transition: border-color 0.2s;
+    }
+
+    .slot-btn:hover {
+      border-color: var(--gold);
+    }
+
+    .slot-preview {
+      position: relative;
+      border-radius: 10px;
+      overflow: hidden;
+      aspect-ratio: 1;
+    }
+
+    .slot-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .slot-clear {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      background: rgba(0, 0, 0, 0.7);
+      border: none;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      color: #fff;
+      cursor: pointer;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .slot-ok {
+      position: absolute;
+      bottom: 5px;
+      left: 6px;
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    /* info banner */
+    .banner {
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .banner.green {
+      background: rgba(126, 184, 164, 0.1);
+      border: 1px solid rgba(126, 184, 164, 0.3);
+      color: var(--teal);
+    }
+
+    .banner.amber {
+      background: rgba(201, 169, 110, 0.07);
+      border: 1px solid rgba(201, 169, 110, 0.2);
+      color: var(--muted);
+    }
+
+    .banner.red {
+      background: rgba(224, 123, 106, 0.1);
+      border: 1px solid rgba(224, 123, 106, 0.3);
+      color: var(--red);
+    }
+
+    /* buttons */
+    .btn {
+      width: 100%;
+      padding: 13px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      font-family: var(--font-serif);
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--gold);
+      color: #0f0f1a;
+    }
+
+    .btn-primary:disabled {
+      background: var(--surface2);
+      color: var(--dim);
+      cursor: not-allowed;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    .btn-danger {
+      background: transparent;
+      border: 1px solid rgba(224, 123, 106, 0.3);
+      color: var(--red);
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .btn-row .btn {
+      flex: 1;
+    }
+
+    .btn-row .btn-primary {
+      flex: 2;
+    }
+
+    /* analyzing spinner */
+    .analyzing {
+      text-align: center;
+      padding: 48px 0;
+    }
+
+    .spinner {
+      font-size: 48px;
+      display: inline-block;
+      animation: spin 1.2s linear infinite;
+      margin-bottom: 16px;
+    }
+
+    @keyframes spin {
+      from {
+        transform: rotate(0deg)
+      }
+
+      to {
+        transform: rotate(360deg)
+      }
+    }
+
+    .analyzing p {
+      color: var(--muted);
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+
+    .analyzing small {
+      color: var(--dim);
+      font-size: 12px;
+    }
+
+    /* detail view */
+    .detail-imgs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .detail-imgs img {
+      border-radius: 12px;
+      object-fit: contain;
+      background: #050510;
+      max-height: 260px;
+    }
+
+    .detail-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      margin-right: 6px;
+      margin-bottom: 8px;
+    }
+
+    .detail-h2 {
+      font-size: 22px;
+      font-weight: 400;
+      margin-bottom: 6px;
+    }
+
+    .detail-brand {
+      color: var(--muted);
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+
+    .detail-desc {
+      color: #aaa;
+      font-size: 14px;
+      line-height: 1.7;
+      margin-bottom: 16px;
+    }
+
+    .raw-box {
+      background: #0a0a15;
+      border: 1px solid var(--surface2);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 16px;
+    }
+
+    .raw-box .raw-label {
+      color: var(--dim);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 5px;
+    }
+
+    .raw-box pre {
+      color: #666;
+      font-size: 11px;
+      white-space: pre-wrap;
+      font-family: monospace;
+      line-height: 1.5;
+    }
+
+    .notes-box {
+      border-left: 3px solid var(--gold);
+      padding-left: 12px;
+      margin-bottom: 16px;
+    }
+
+    .notes-box .notes-label {
+      color: var(--dim);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+
+    .notes-box p {
+      color: #ccc;
+      font-size: 14px;
+    }
+
+    .detail-loc {
+      color: var(--dim);
+      font-size: 12px;
+      margin-bottom: 16px;
+    }
+
+    .detail-date {
+      color: #333;
+      font-size: 12px;
+      margin-bottom: 20px;
+    }
+
+    /* queue section */
+    .section-title {
+      color: var(--dim);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-title span {
+      background: var(--red);
+      color: #fff;
+      border-radius: 10px;
+      padding: 1px 7px;
+      font-size: 10px;
+    }
+
+    .queue-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    .queue-item:hover {
+      border-color: var(--gold);
+    }
+
+    .queue-thumb {
+      width: 52px;
+      height: 52px;
+      border-radius: 8px;
+      object-fit: cover;
+      background: #050510;
+      flex-shrink: 0;
+    }
+
+    .queue-thumb-placeholder {
+      width: 52px;
+      height: 52px;
+      border-radius: 8px;
+      background: var(--surface2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+
+    .queue-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .queue-info p {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .queue-info small {
+      font-size: 11px;
+      color: var(--dim);
+    }
+
+    .queue-process-btn {
+      background: var(--gold);
+      border: none;
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 12px;
+      color: #0f0f1a;
+      cursor: pointer;
+      font-family: var(--font-serif);
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    /* server status dot */
+    .server-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 5px;
+    }
+
+    .server-status {
+      font-size: 11px;
+      color: var(--dim);
+      display: flex;
+      align-items: center;
+      margin-top: 2px;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app"></div>
+
+  <script>
+    // ── Constants ────────────────────────────────────────────────────────────────
+    const STORAGE_KEY = 'collector_v2';
+    const QUEUE_KEY = 'collector_queue_v2';
+    const SERVER_URL = 'http://10.0.0.99:1234';
+    const MODEL_ID = 'qwen/qwen2.5-vl-7b'; // LM Studio model identifier
+
+    const CATS = {
+      Art: { color: '#C9A96E', icon: '🖼' },
+      Antiques: { color: '#B5956A', icon: '🏺' },
+      Other: { color: '#8899AA', icon: '📦' },
+    };
+
+    // ── Storage ──────────────────────────────────────────────────────────────────
+    function loadItems() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { return []; } }
+    function saveItems(items) { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }
+    function loadQueue() { try { return JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]'); } catch { return []; } }
+    function saveQueue(q) { localStorage.setItem(QUEUE_KEY, JSON.stringify(q)); }
+
+    // ── State ────────────────────────────────────────────────────────────────────
+    let state = {
+      tab: 'collection',       // collection | queue | map
+      items: loadItems(),
+      queue: loadQueue(),
+      search: '',
+      filterCat: 'All',
+      modal: null,             // null | 'scanner' | 'detail' | 'queue-item'
+      selectedItem: null,
+      selectedQueueItem: null,
+      serverOnline: null,      // null=unknown, true, false
+      location: null,
+      // scanner state
+      scan: {
+        step: 'capture',       // capture | analyzing | result
+        primary: null,
+        secondary: null,
+        result: null,
+        edit: null,
+        error: null,
+        isQueueProcess: false,
+        queueId: null,
+      }
+    };
+
+    // ── Server check ─────────────────────────────────────────────────────────────
+    async function checkServer() {
+      try {
+        const r = await fetch(`${SERVER_URL}/v1/models`, { signal: AbortSignal.timeout(2000) });
+        state.serverOnline = r.ok;
+      } catch {
+        state.serverOnline = false;
+      }
+      render();
+    }
+
+    // ── AI Analysis ──────────────────────────────────────────────────────────────
+    async function analyzeImages(primary, primaryMime, secondary, secondaryMime) {
+      const hasBoth = primary && secondary;
+
+      const systemPrompt = hasBoth
+        ? `You are an expert object and artwork identifier. You are given TWO images: the first is a photo of the item/artwork itself, and the second is a photo of its accompanying label, placard, or signage. Use BOTH images together for maximum accuracy. Extract all text from the label. Synthesize everything into: title, category (Art/Antiques/Other), brand or artist, year, description (2-3 rich sentences), rawText (full label text). Respond ONLY as a raw JSON object, no markdown, no backticks: {"title":"...","category":"...","brand":"...","year":"...","description":"...","rawText":"..."}`
+        : `You are a universal object identification expert. Identify what this item is. Provide: title, category (Art/Antiques/Other), brand or artist if detectable, year or era if detectable, description (2-3 interesting sentences). Respond ONLY as a raw JSON object, no markdown, no backticks: {"title":"...","category":"...","brand":"...","year":"...","description":"..."}`;
+
+      const content = [];
+      content.push({ type: 'image_url', image_url: { url: `data:${primaryMime};base64,${primary}` } });
+      if (hasBoth) content.push({ type: 'image_url', image_url: { url: `data:${secondaryMime};base64,${secondary}` } });
+      content.push({ type: 'text', text: hasBoth ? 'Use both images to identify and describe this item.' : 'Identify this item.' });
+
+      const response = await fetch(`${SERVER_URL}/v1/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: MODEL_ID,
+          max_tokens: 800,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content }
+          ]
+        })
+      });
+
+      const data = await response.json();
+      const text = data.choices?.[0]?.message?.content || '{}';
+      try {
+        return JSON.parse(text.replace(/```json|```/g, '').trim());
+      } catch {
+        return { title: 'Unknown Item', category: 'Other', description: text };
+      }
+    }
+
+    // ── File helpers ─────────────────────────────────────────────────────────────
+    function readFileAsBase64(file) {
+      return new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = (e) => res({ data: e.target.result.split(',')[1], mime: file.type || 'image/jpeg', dataUrl: e.target.result });
+        r.onerror = rej;
+        r.readAsDataURL(file);
+      });
+    }
+
+    // ── Geolocation ──────────────────────────────────────────────────────────────
+    function getLocation() {
+      navigator.geolocation?.getCurrentPosition(
+        pos => { state.location = { lat: pos.coords.latitude, lng: pos.coords.longitude }; },
+        () => { }
+      );
+    }
+
+    // ── Map ──────────────────────────────────────────────────────────────────────
+    let mapInstance = null;
+    function initMap() {
+      const el = document.getElementById('map');
+      if (!el || mapInstance) return;
+      mapInstance = L.map('map').setView([20, 0], 2);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(mapInstance);
+      renderMapMarkers();
+    }
+    function destroyMap() {
+      if (mapInstance) { mapInstance.remove(); mapInstance = null; }
+    }
+    function renderMapMarkers() {
+      if (!mapInstance) return;
+      mapInstance.eachLayer(l => { if (l instanceof L.Marker) mapInstance.removeLayer(l); });
+      const geo = state.items.filter(i => i.lat && i.lng);
+      geo.forEach(item => {
+        const c = CATS[item.category]?.color || '#8899AA';
+        const ic = CATS[item.category]?.icon || '📦';
+        const icon = L.divIcon({ className: '', html: `<div style="background:${c};width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 8px rgba(0,0,0,0.4);border:2px solid white">${ic}</div>`, iconSize: [36, 36], iconAnchor: [18, 18] });
+        L.marker([item.lat, item.lng], { icon }).addTo(mapInstance)
+          .bindPopup(`<div style="font-family:serif;min-width:130px"><strong style="font-size:14px">${item.title}</strong><br><span style="color:#666;font-size:12px">${item.category}</span>${item.brand ? `<br><span style="font-size:12px">${item.brand}</span>` : ''}</div>`);
+      });
+      if (geo.length > 1) {
+        mapInstance.fitBounds(L.featureGroup(geo.map(i => L.marker([i.lat, i.lng]))).getBounds().pad(0.2));
+      } else if (geo.length === 1) {
+        mapInstance.setView([geo[0].lat, geo[0].lng], 13);
+      }
+    }
+
+    // ── Render ───────────────────────────────────────────────────────────────────
+    function render() {
+      const app = document.getElementById('app');
+      app.innerHTML = '';
+      app.appendChild(renderApp());
+
+      // post-render hooks
+      if (state.tab === 'map') {
+        setTimeout(() => { initMap(); renderMapMarkers(); }, 50);
+      } else {
+        destroyMap();
+      }
+    }
+
+    function renderApp() {
+      const wrap = el('div', { id: 'app-inner', style: 'height:100dvh;display:flex;flex-direction:column' });
+
+      // Header
+      const header = el('div', { className: 'header' });
+      const titleWrap = el('div');
+      const h1 = el('h1');
+      h1.innerHTML = '<span>✦</span> COLLECTOR';
+      const sub = el('p');
+      const serverDot = el('span', { className: 'server-dot', style: `background:${state.serverOnline === true ? '#6BAE75' : state.serverOnline === false ? '#E07B6A' : '#888'}` });
+      sub.appendChild(serverDot);
+      sub.appendChild(txt(state.serverOnline === true ? 'local AI connected' : state.serverOnline === false ? 'local AI offline — start LM Studio' : 'checking server…'));
+      titleWrap.appendChild(h1);
+      titleWrap.appendChild(sub);
+      const addBtn = el('button', { className: 'add-btn', onclick: () => openScanner() });
+      addBtn.textContent = '+';
+      header.appendChild(titleWrap);
+      header.appendChild(addBtn);
+      wrap.appendChild(header);
+
+      // Item count
+      const countBar = el('div', { style: 'padding:2px 20px 0;color:#444;font-size:10px;letter-spacing:3px;text-transform:uppercase' });
+      countBar.textContent = `${state.items.length} item${state.items.length !== 1 ? 's' : ''} · ${state.queue.length} in queue`;
+      wrap.appendChild(countBar);
+
+      // Tabs
+      const tabs = el('div', { className: 'tabs' });
+      [['collection', 'Collection'], ['queue', 'Queue'], ['map', 'Map']].forEach(([v, l]) => {
+        const t = el('button', { className: 'tab' + (state.tab === v ? ' active' : ''), onclick: () => { state.tab = v; render(); } });
+        if (v === 'queue' && state.queue.length > 0) {
+          t.innerHTML = `${l} <span style="background:var(--red);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:4px">${state.queue.length}</span>`;
+        } else {
+          t.textContent = l;
+        }
+        tabs.appendChild(t);
+      });
+      wrap.appendChild(tabs);
+
+      // Content
+      if (state.tab === 'collection') wrap.appendChild(renderCollection());
+      else if (state.tab === 'queue') wrap.appendChild(renderQueue());
+      else if (state.tab === 'map') wrap.appendChild(renderMap());
+
+      // Modals
+      if (state.modal === 'scanner') wrap.appendChild(renderScannerModal());
+      if (state.modal === 'detail' && state.selectedItem) wrap.appendChild(renderDetailModal(state.selectedItem));
+      if (state.modal === 'queue-add') wrap.appendChild(renderQueueAddModal());
+
+      return wrap;
+    }
+
+    // ── Collection tab ───────────────────────────────────────────────────────────
+    function renderCollection() {
+      const wrap = el('div', { className: 'content' });
+      const search = el('input', { className: 'search', placeholder: 'Search your collection…', value: state.search, oninput: (e) => { state.search = e.target.value; render(); } });
+      wrap.appendChild(search);
+
+      // filters
+      const filters = el('div', { className: 'filters' });
+      ['All', ...Object.keys(CATS)].forEach(c => {
+        const active = state.filterCat === c;
+        const color = CATS[c]?.color || '#C9A96E';
+        const btn = el('button', { className: 'filter-btn', style: active ? `border-color:${color};background:${color}22;color:${color}` : '', onclick: () => { state.filterCat = c; render(); } });
+        btn.textContent = (c !== 'All' ? CATS[c].icon + ' ' : '') + c;
+        filters.appendChild(btn);
+      });
+      wrap.appendChild(filters);
+
+      // items
+      const filtered = state.items.filter(i => {
+        const matchCat = state.filterCat === 'All' || i.category === state.filterCat;
+        const matchSearch = !state.search || `${i.title} ${i.brand} ${i.description}`.toLowerCase().includes(state.search.toLowerCase());
+        return matchCat && matchSearch;
+      });
+
+      if (filtered.length === 0) {
+        const empty = el('div', { className: 'empty' });
+        empty.innerHTML = `<div class="empty-icon">✦</div><p>${state.items.length === 0 ? 'Your collection is empty.<br>Tap + to scan your first item.' : 'No items match your search.'}</p>`;
+        wrap.appendChild(empty);
+      } else {
+        const grid = el('div', { className: 'grid' });
+        filtered.forEach(item => {
+          const color = CATS[item.category]?.color || '#8899AA';
+          const card = el('div', { className: 'card', style: `--card-color:${color}`, onclick: () => { state.selectedItem = item; state.modal = 'detail'; render(); } });
+          card.addEventListener('mouseenter', () => card.style.borderColor = color + '66');
+          card.addEventListener('mouseleave', () => card.style.borderColor = '');
+          const imgBox = el('div', { className: 'card-img' });
+          if (item.imageData) {
+            const img = el('img', { src: `data:${item.imageMime || 'image/jpeg'};base64,${item.imageData}`, alt: item.title });
+            imgBox.appendChild(img);
+          } else {
+            imgBox.textContent = CATS[item.category]?.icon || '📦';
+          }
+          if (item.signageData) { const b = el('div', { className: 'dual-badge' }); b.textContent = '✦ DUAL'; imgBox.appendChild(b); }
+          const info = el('div', { className: 'card-info' });
+          const cat = el('div', { className: 'card-cat', style: `color:${color}` }); cat.textContent = item.category;
+          const title = el('div', { className: 'card-title' }); title.textContent = item.title;
+          info.appendChild(cat); info.appendChild(title);
+          if (item.brand) { const brand = el('div', { className: 'card-brand' }); brand.textContent = item.brand; info.appendChild(brand); }
+          card.appendChild(imgBox); card.appendChild(info);
+          grid.appendChild(card);
+        });
+        wrap.appendChild(grid);
+      }
+      return wrap;
+    }
+
+    // ── Queue tab ────────────────────────────────────────────────────────────────
+    function renderQueue() {
+      const wrap = el('div', { className: 'content' });
+
+      // Add to queue button
+      const addRow = el('div', { style: 'margin-bottom:20px' });
+      const addQBtn = el('button', { className: 'btn btn-ghost', onclick: () => { state.modal = 'queue-add'; render(); } });
+      addQBtn.textContent = '+ Add photos to queue';
+      addRow.appendChild(addQBtn);
+      wrap.appendChild(addRow);
+
+      if (state.queue.length === 0) {
+        const empty = el('div', { className: 'empty' });
+        empty.innerHTML = `<div class="empty-icon">📷</div><p>No photos in queue.<br>Add photos here when you're out,<br>then process them at home.</p>`;
+        wrap.appendChild(empty);
+        return wrap;
+      }
+
+      const title = el('div', { className: 'section-title' });
+      title.innerHTML = `Awaiting processing <span>${state.queue.length}</span>`;
+      wrap.appendChild(title);
+
+      if (state.serverOnline === false) {
+        const notice = el('div', { className: 'banner red', style: 'margin-bottom:16px' });
+        notice.innerHTML = '⚠ LM Studio is offline. Start it and load Qwen2.5-VL to process items.';
+        wrap.appendChild(notice);
+      }
+
+      state.queue.forEach(qitem => {
+        const row = el('div', { className: 'queue-item' });
+        if (qitem.primaryDataUrl) {
+          const thumb = el('img', { className: 'queue-thumb', src: qitem.primaryDataUrl, alt: 'queued' });
+          row.appendChild(thumb);
+        } else {
+          const ph = el('div', { className: 'queue-thumb-placeholder' }); ph.textContent = '📷'; row.appendChild(ph);
+        }
+        const info = el('div', { className: 'queue-info' });
+        const p = el('p'); p.textContent = qitem.note || 'Photo captured';
+        const sm = el('small'); sm.textContent = new Date(qitem.addedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) + (qitem.secondaryDataUrl ? ' · +label' : '');
+        info.appendChild(p); info.appendChild(sm); row.appendChild(info);
+        const procBtn = el('button', { className: 'queue-process-btn', onclick: (e) => { e.stopPropagation(); processQueueItem(qitem); } });
+        procBtn.textContent = state.serverOnline ? 'Process →' : 'Offline';
+        procBtn.disabled = !state.serverOnline;
+        row.appendChild(procBtn);
+        // delete on long press / right side tap
+        row.addEventListener('click', () => {
+          if (confirm('Remove this item from the queue?')) {
+            state.queue = state.queue.filter(q => q.id !== qitem.id);
+            saveQueue(state.queue);
+            render();
+          }
+        });
+        wrap.appendChild(row);
+      });
+
+      // Process all button
+      if (state.queue.length > 1 && state.serverOnline) {
+        const allBtn = el('button', { className: 'btn btn-primary', style: 'margin-top:16px', onclick: processAllQueue });
+        allBtn.textContent = `Process all ${state.queue.length} items →`;
+        wrap.appendChild(allBtn);
+      }
+
+      return wrap;
+    }
+
+    // ── Map tab ──────────────────────────────────────────────────────────────────
+    function renderMap() {
+      const wrap = el('div', { className: 'map-content' });
+      const geoCount = state.items.filter(i => i.lat && i.lng).length;
+      if (geoCount === 0) {
+        const notice = el('div', { className: 'map-notice' });
+        notice.textContent = '📍 No location data yet — enable location when scanning items';
+        wrap.appendChild(notice);
+      }
+      const mapDiv = el('div', { id: 'map', style: `height:${geoCount === 0 ? 'calc(100% - 48px)' : '100%'}` });
+      wrap.appendChild(mapDiv);
+      return wrap;
+    }
+
+    // ── Scanner modal ────────────────────────────────────────────────────────────
+    function openScanner(queueItem) {
+      state.modal = 'scanner';
+      state.scan = {
+        step: 'capture',
+        primary: null, secondary: null,
+        result: null, edit: null, error: null,
+        isQueueProcess: !!queueItem,
+        queueId: queueItem?.id || null,
+      };
+      if (queueItem) {
+        // pre-load from queue item
+        state.scan.primary = { data: queueItem.primaryData, mime: queueItem.primaryMime, dataUrl: queueItem.primaryDataUrl };
+        if (queueItem.secondaryData) {
+          state.scan.secondary = { data: queueItem.secondaryData, mime: queueItem.secondaryMime, dataUrl: queueItem.secondaryDataUrl };
+        }
+      }
+      render();
+    }
+
+    function processQueueItem(qitem) { openScanner(qitem); }
+
+    async function processAllQueue() {
+      // Process one at a time automatically
+      for (const qitem of [...state.queue]) {
+        state.scan = {
+          step: 'analyzing',
+          primary: { data: qitem.primaryData, mime: qitem.primaryMime, dataUrl: qitem.primaryDataUrl },
+          secondary: qitem.secondaryData ? { data: qitem.secondaryData, mime: qitem.secondaryMime, dataUrl: qitem.secondaryDataUrl } : null,
+          isQueueProcess: true, queueId: qitem.id,
+          result: null, edit: null, error: null,
+        };
+        state.modal = 'scanner';
+        render();
+        try {
+          const res = await analyzeImages(qitem.primaryData, qitem.primaryMime, qitem.secondaryData, qitem.secondaryMime);
+          const item = {
+            id: Date.now().toString() + Math.random(),
+            title: res.title || 'Unknown Item',
+            category: res.category || 'Other',
+            brand: res.brand || '',
+            year: res.year || '',
+            description: res.description || '',
+            rawText: res.rawText || '',
+            notes: qitem.note || '',
+            imageData: qitem.primaryData,
+            imageMime: qitem.primaryMime,
+            signageData: qitem.secondaryData || null,
+            signageMime: qitem.secondaryMime || null,
+            lat: qitem.lat, lng: qitem.lng,
+            savedAt: new Date().toISOString(),
+          };
+          state.items = [item, ...state.items];
+          saveItems(state.items);
+          state.queue = state.queue.filter(q => q.id !== qitem.id);
+          saveQueue(state.queue);
+        } catch (e) { console.error(e); }
+      }
+      state.modal = null;
+      state.tab = 'collection';
+      render();
+    }
+
+    function renderScannerModal() {
+      const scan = state.scan;
+      const bg = el('div', { className: 'modal-bg', onclick: (e) => { if (e.target === bg) closeScannerModal(); } });
+      const modal = el('div', { className: 'modal' });
+      const closeBtn = el('button', { className: 'modal-close', onclick: closeScannerModal }); closeBtn.textContent = '✕';
+      modal.appendChild(closeBtn);
+
+      if (scan.step === 'capture') {
+        const h2 = el('h2'); h2.textContent = scan.isQueueProcess ? 'Process Queued Item' : 'Scan Item';
+        const sub = el('p', { className: 'subtitle' }); sub.textContent = 'Artwork photo required. Add label for better identification.';
+        modal.appendChild(h2); modal.appendChild(sub);
+
+        // slots
+        const slots = el('div', { className: 'slots' });
+        slots.appendChild(renderSlot('Item / Artwork', '📷', 'Photo the item', scan.primary, 'primary', '#C9A96E'));
+        slots.appendChild(renderSlot('Label / Signage', '🏷', 'Photo the label\n(optional)', scan.secondary, 'secondary', '#7EB8A4'));
+        modal.appendChild(slots);
+
+        // banner
+        if (scan.primary && scan.secondary) {
+          const b = el('div', { className: 'banner green' }); b.innerHTML = '<span>✦</span> Both captured — AI will cross-reference artwork + label';
+          modal.appendChild(b);
+        } else if (scan.primary) {
+          const b = el('div', { className: 'banner amber' }); b.textContent = 'Add label photo for significantly better results';
+          modal.appendChild(b);
+        }
+        if (scan.error) { const b = el('div', { className: 'banner red' }); b.textContent = scan.error; modal.appendChild(b); }
+
+        const btn = el('button', { className: 'btn btn-primary', disabled: !scan.primary, onclick: doAnalyze });
+        btn.textContent = scan.primary && scan.secondary ? 'Analyze Both Images →' : scan.primary ? 'Analyze Item →' : 'Capture item photo to continue';
+        modal.appendChild(btn);
+      }
+
+      else if (scan.step === 'analyzing') {
+        const a = el('div', { className: 'analyzing' });
+        a.innerHTML = `<div class="spinner">✦</div><p>${scan.primary && scan.secondary ? 'Cross-referencing artwork + label…' : 'Identifying your item…'}</p><small>Qwen2.5-VL is thinking</small>`;
+        modal.appendChild(a);
+      }
+
+      else if (scan.step === 'result' && scan.edit) {
+        const e = scan.edit;
+        // preview images
+        const imgs = el('div', { className: 'detail-imgs', style: 'margin-bottom:16px' });
+        if (scan.primary) {
+          const img = el('img', { src: scan.primary.dataUrl, style: `flex:1;max-height:160px;border:1px solid var(--border);${scan.secondary ? '' : 'width:100%'}` });
+          imgs.appendChild(img);
+        }
+        if (scan.secondary) {
+          const img = el('img', { src: scan.secondary.dataUrl, style: 'flex:1;max-height:160px;border:1px solid var(--border)' });
+          imgs.appendChild(img);
+        }
+        modal.appendChild(imgs);
+
+        // fields
+        modal.appendChild(fieldLabel('Title'));
+        const titleInput = el('input', { className: 'field', value: e.title, oninput: (ev) => { scan.edit.title = ev.target.value; } });
+        modal.appendChild(titleInput);
+
+        modal.appendChild(fieldLabel('Category'));
+        const pills = el('div', { className: 'cat-pills' });
+        Object.keys(CATS).forEach(c => {
+          const active = e.category === c;
+          const color = CATS[c].color;
+          const pill = el('button', { className: 'cat-pill', style: active ? `border-color:${color};background:${color}22;color:${color}` : '', onclick: () => { scan.edit.category = c; render(); } });
+          pill.textContent = CATS[c].icon + ' ' + c;
+          pills.appendChild(pill);
+        });
+        modal.appendChild(pills);
+
+        const row = el('div', { style: 'display:flex;gap:10px' });
+        const brandWrap = el('div', { style: 'flex:2' });
+        brandWrap.appendChild(fieldLabel('Artist / Brand'));
+        brandWrap.appendChild(el('input', { className: 'field', value: e.brand || '', oninput: (ev) => { scan.edit.brand = ev.target.value; } }));
+        const yearWrap = el('div', { style: 'flex:1' });
+        yearWrap.appendChild(fieldLabel('Year'));
+        yearWrap.appendChild(el('input', { className: 'field', value: e.year || '', oninput: (ev) => { scan.edit.year = ev.target.value; } }));
+        row.appendChild(brandWrap); row.appendChild(yearWrap);
+        modal.appendChild(row);
+
+        modal.appendChild(fieldLabel('Description'));
+        modal.appendChild(el('textarea', { className: 'field', rows: 3, value: e.description || '', oninput: (ev) => { scan.edit.description = ev.target.value; } }));
+
+        if (e.rawText) {
+          const rb = el('div', { className: 'raw-box', style: 'margin-top:12px' });
+          rb.innerHTML = `<div class="raw-label">Extracted Label Text</div><pre>${e.rawText}</pre>`;
+          modal.appendChild(rb);
+        }
+
+        modal.appendChild(fieldLabel('Personal Notes'));
+        modal.appendChild(el('textarea', { className: 'field', rows: 2, placeholder: 'Where did you find this? Why does it matter?', value: e.notes || '', oninput: (ev) => { scan.edit.notes = ev.target.value; } }));
+
+        if (state.location) {
+          const loc = el('div', { style: 'color:var(--dim);font-size:12px;margin-top:10px' });
+          loc.textContent = `📍 ${state.location.lat.toFixed(4)}, ${state.location.lng.toFixed(4)}`;
+          modal.appendChild(loc);
+        }
+
+        const btnRow = el('div', { className: 'btn-row' });
+        const rescan = el('button', { className: 'btn btn-ghost', onclick: () => { state.scan.step = 'capture'; state.scan.result = null; state.scan.edit = null; render(); } });
+        rescan.textContent = '← Rescan';
+        const save = el('button', { className: 'btn btn-primary', onclick: saveItem });
+        save.textContent = 'Save to Collection ✦';
+        btnRow.appendChild(rescan); btnRow.appendChild(save);
+        modal.appendChild(btnRow);
+      }
+
+      bg.appendChild(modal);
+      return bg;
+    }
+
+    function renderSlot(label, icon, sublabel, data, key, accent) {
+      const slot = el('div', { className: 'slot' });
+      const lbl = el('div', { className: 'slot-label' }); lbl.textContent = label;
+      slot.appendChild(lbl);
+
+      if (data) {
+        const preview = el('div', { className: 'slot-preview', style: `border:1px solid ${accent}55` });
+        const img = el('img', { src: data.dataUrl || `data:${data.mime};base64,${data.data}`, alt: label });
+        const clearBtn = el('button', { className: 'slot-clear', onclick: () => { state.scan[key] = null; render(); } });
+        clearBtn.textContent = '✕';
+        const ok = el('div', { className: 'slot-ok', style: `color:${accent}` }); ok.textContent = '✓ Captured';
+        preview.appendChild(img); preview.appendChild(clearBtn); preview.appendChild(ok);
+        slot.appendChild(preview);
+      } else {
+        const cameraInput = el('input', { type: 'file', accept: 'image/*', capture: 'environment', style: 'display:none' });
+        cameraInput.onchange = async (e) => { if (e.target.files[0]) { state.scan[key] = await readFileAsBase64(e.target.files[0]); render(); } };
+        const uploadInput = el('input', { type: 'file', accept: 'image/*', style: 'display:none' });
+        uploadInput.onchange = async (e) => { if (e.target.files[0]) { state.scan[key] = await readFileAsBase64(e.target.files[0]); render(); } };
+
+        const box = el('div', { className: 'slot-btn', style: 'cursor:default;gap:10px;padding:10px' });
+        box.addEventListener('mouseenter', () => box.style.borderColor = accent);
+        box.addEventListener('mouseleave', () => box.style.borderColor = '');
+        const iconSpan = el('span', { style: 'font-size:24px' }); iconSpan.textContent = icon;
+        box.appendChild(iconSpan);
+        const choiceRow = el('div', { style: 'display:flex;gap:6px;width:100%' });
+        const camBtn = el('button', { style: `flex:1;padding:5px 0;border-radius:6px;border:1px solid ${accent}55;background:${accent}15;color:${accent};font-size:11px;cursor:pointer;font-family:var(--font-serif)` });
+        camBtn.textContent = '📷 Camera';
+        camBtn.onclick = (e) => { e.stopPropagation(); cameraInput.click(); };
+        const upBtn = el('button', { style: 'flex:1;padding:5px 0;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;cursor:pointer;font-family:var(--font-serif)' });
+        upBtn.textContent = '🖼 Upload';
+        upBtn.onclick = (e) => { e.stopPropagation(); uploadInput.click(); };
+        choiceRow.appendChild(camBtn); choiceRow.appendChild(upBtn);
+        box.appendChild(choiceRow);
+        slot.appendChild(box);
+        slot.appendChild(cameraInput);
+        slot.appendChild(uploadInput);
+      }
+      return slot;
+    }
+
+    async function doAnalyze() {
+      const scan = state.scan;
+      scan.step = 'analyzing';
+      scan.error = null;
+      render();
+      try {
+        const res = await analyzeImages(scan.primary.data, scan.primary.mime, scan.secondary?.data, scan.secondary?.mime);
+        scan.result = res;
+        scan.edit = { title: res.title || '', category: res.category || 'Other', brand: res.brand || '', year: res.year || '', description: res.description || '', rawText: res.rawText || '', notes: '' };
+        scan.step = 'result';
+      } catch (e) {
+        scan.error = 'Analysis failed. Is LM Studio running with Qwen2.5-VL loaded?';
+        scan.step = 'capture';
+      }
+      render();
+    }
+
+    function saveItem() {
+      const scan = state.scan;
+      const e = scan.edit;
+      const item = {
+        id: Date.now().toString(),
+        ...e,
+        imageData: scan.primary.data,
+        imageMime: scan.primary.mime,
+        signageData: scan.secondary?.data || null,
+        signageMime: scan.secondary?.mime || null,
+        lat: state.location?.lat,
+        lng: state.location?.lng,
+        savedAt: new Date().toISOString(),
+      };
+      // remove from queue if this was a queue item
+      if (scan.isQueueProcess && scan.queueId) {
+        state.queue = state.queue.filter(q => q.id !== scan.queueId);
+        saveQueue(state.queue);
+      }
+      state.items = [item, ...state.items];
+      saveItems(state.items);
+      state.modal = null;
+      state.tab = 'collection';
+      render();
+    }
+
+    function closeScannerModal() { state.modal = null; render(); }
+
+    // ── Queue add modal ──────────────────────────────────────────────────────────
+    function renderQueueAddModal() {
+      let qPrimary = null, qSecondary = null, qNote = '';
+
+      const bg = el('div', { className: 'modal-bg', onclick: (e) => { if (e.target === bg) { state.modal = null; render(); } } });
+      const modal = el('div', { className: 'modal' });
+      const closeBtn = el('button', { className: 'modal-close', onclick: () => { state.modal = null; render(); } }); closeBtn.textContent = '✕';
+      modal.appendChild(closeBtn);
+
+      const h2 = el('h2'); h2.textContent = 'Add to Queue';
+      const sub = el('p', { className: 'subtitle' }); sub.textContent = 'Capture photos now, process with AI when you\'re home.';
+      modal.appendChild(h2); modal.appendChild(sub);
+
+      const slotsWrap = el('div', { className: 'slots' });
+
+      function refreshModal() {
+        slotsWrap.innerHTML = '';
+        // Primary slot
+        const s1 = el('div', { className: 'slot' });
+        const l1 = el('div', { className: 'slot-label' }); l1.textContent = 'Item / Artwork';
+        s1.appendChild(l1);
+        if (qPrimary) {
+          const prev = el('div', { className: 'slot-preview', style: 'border:1px solid #C9A96E55' });
+          prev.innerHTML = `<img src="${qPrimary.dataUrl}"><button class="slot-clear" onclick="void(0)">✕</button><div class="slot-ok" style="color:#C9A96E">✓ Captured</div>`;
+          prev.querySelector('.slot-clear').onclick = () => { qPrimary = null; refreshModal(); updateSaveBtn(); };
+          s1.appendChild(prev);
+        } else {
+          const fi1cam = el('input', { type: 'file', accept: 'image/*', capture: 'environment', style: 'display:none' });
+          fi1cam.onchange = async (e) => { if (e.target.files[0]) { qPrimary = await readFileAsBase64(e.target.files[0]); refreshModal(); updateSaveBtn(); } };
+          const fi1up = el('input', { type: 'file', accept: 'image/*', style: 'display:none' });
+          fi1up.onchange = async (e) => { if (e.target.files[0]) { qPrimary = await readFileAsBase64(e.target.files[0]); refreshModal(); updateSaveBtn(); } };
+          const b1 = el('div', { className: 'slot-btn', style: 'cursor:default;gap:10px;padding:10px' });
+          const b1icon = el('span', { style: 'font-size:24px' }); b1icon.textContent = '📷'; b1.appendChild(b1icon);
+          const b1row = el('div', { style: 'display:flex;gap:6px;width:100%' });
+          const b1cam = el('button', { style: 'flex:1;padding:5px 0;border-radius:6px;border:1px solid #C9A96E55;background:#C9A96E15;color:#C9A96E;font-size:11px;cursor:pointer;font-family:var(--font-serif)' }); b1cam.textContent = '📷 Camera'; b1cam.onclick = () => fi1cam.click();
+          const b1up = el('button', { style: 'flex:1;padding:5px 0;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;cursor:pointer;font-family:var(--font-serif)' }); b1up.textContent = '🖼 Upload'; b1up.onclick = () => fi1up.click();
+          b1row.appendChild(b1cam); b1row.appendChild(b1up); b1.appendChild(b1row);
+          s1.appendChild(b1); s1.appendChild(fi1cam); s1.appendChild(fi1up);
+        }
+
+        // Secondary slot
+        const s2 = el('div', { className: 'slot' });
+        const l2 = el('div', { className: 'slot-label' }); l2.textContent = 'Label / Signage';
+        s2.appendChild(l2);
+        if (qSecondary) {
+          const prev = el('div', { className: 'slot-preview', style: 'border:1px solid #7EB8A455' });
+          prev.innerHTML = `<img src="${qSecondary.dataUrl}"><button class="slot-clear">✕</button><div class="slot-ok" style="color:#7EB8A4">✓ Captured</div>`;
+          prev.querySelector('.slot-clear').onclick = () => { qSecondary = null; refreshModal(); };
+          s2.appendChild(prev);
+        } else {
+          const fi2cam = el('input', { type: 'file', accept: 'image/*', capture: 'environment', style: 'display:none' });
+          fi2cam.onchange = async (e) => { if (e.target.files[0]) { qSecondary = await readFileAsBase64(e.target.files[0]); refreshModal(); } };
+          const fi2up = el('input', { type: 'file', accept: 'image/*', style: 'display:none' });
+          fi2up.onchange = async (e) => { if (e.target.files[0]) { qSecondary = await readFileAsBase64(e.target.files[0]); refreshModal(); } };
+          const b2 = el('div', { className: 'slot-btn', style: 'cursor:default;gap:10px;padding:10px' });
+          const b2icon = el('span', { style: 'font-size:24px' }); b2icon.textContent = '🏷'; b2.appendChild(b2icon);
+          const b2row = el('div', { style: 'display:flex;gap:6px;width:100%' });
+          const b2cam = el('button', { style: 'flex:1;padding:5px 0;border-radius:6px;border:1px solid #7EB8A455;background:#7EB8A415;color:#7EB8A4;font-size:11px;cursor:pointer;font-family:var(--font-serif)' }); b2cam.textContent = '📷 Camera'; b2cam.onclick = () => fi2cam.click();
+          const b2up = el('button', { style: 'flex:1;padding:5px 0;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;cursor:pointer;font-family:var(--font-serif)' }); b2up.textContent = '🖼 Upload'; b2up.onclick = () => fi2up.click();
+          b2row.appendChild(b2cam); b2row.appendChild(b2up); b2.appendChild(b2row);
+          s2.appendChild(b2); s2.appendChild(fi2cam); s2.appendChild(fi2up);
+        }
+
+        slotsWrap.appendChild(s1);
+        slotsWrap.appendChild(s2);
+      }
+
+      refreshModal();
+      modal.appendChild(slotsWrap);
+
+      modal.appendChild(fieldLabel('Note (optional)'));
+      const noteInput = el('input', { className: 'field', placeholder: 'e.g. Found at the Louvre, Room 7', oninput: (e) => { qNote = e.target.value; } });
+      modal.appendChild(noteInput);
+
+      const saveBtn = el('button', {
+        className: 'btn btn-primary', style: 'margin-top:16px', disabled: true, onclick: () => {
+          if (!qPrimary) return;
+          const qitem = {
+            id: Date.now().toString(),
+            primaryData: qPrimary.data,
+            primaryMime: qPrimary.mime,
+            primaryDataUrl: qPrimary.dataUrl,
+            secondaryData: qSecondary?.data || null,
+            secondaryMime: qSecondary?.mime || null,
+            secondaryDataUrl: qSecondary?.dataUrl || null,
+            note: qNote,
+            lat: state.location?.lat,
+            lng: state.location?.lng,
+            addedAt: new Date().toISOString(),
+          };
+          state.queue = [qitem, ...state.queue];
+          saveQueue(state.queue);
+          state.modal = null;
+          state.tab = 'queue';
+          render();
+        }
+      });
+      saveBtn.textContent = 'Add to Queue';
+      modal.appendChild(saveBtn);
+
+      function updateSaveBtn() { saveBtn.disabled = !qPrimary; }
+
+      bg.appendChild(modal);
+      return bg;
+    }
+
+    // ── Detail modal ─────────────────────────────────────────────────────────────
+    function renderDetailModal(item) {
+      const color = CATS[item.category]?.color || '#8899AA';
+      const bg = el('div', { className: 'modal-bg bottom', onclick: (e) => { if (e.target === bg) { state.modal = null; render(); } } });
+      const modal = el('div', { className: 'modal sheet' });
+      const handle = el('div', { className: 'modal-handle' });
+      modal.appendChild(handle);
+
+      // images
+      const imgs = el('div', { className: 'detail-imgs' });
+      if (item.imageData) {
+        const img = el('img', { src: `data:${item.imageMime || 'image/jpeg'};base64,${item.imageData}`, alt: item.title, style: item.signageData ? 'flex:1' : 'width:100%' });
+        imgs.appendChild(img);
+      }
+      if (item.signageData) {
+        const wrap = el('div', { style: 'flex:1;display:flex;flex-direction:column;gap:4px' });
+        const img = el('img', { src: `data:${item.signageMime || 'image/jpeg'};base64,${item.signageData}`, alt: 'label', style: 'border-radius:10px;object-fit:contain;background:#050510;border:1px solid var(--border);flex:1' });
+        const cap = el('div', { style: 'color:var(--dim);font-size:10px;text-align:center;text-transform:uppercase;letter-spacing:1px' }); cap.textContent = 'Label';
+        wrap.appendChild(img); wrap.appendChild(cap); imgs.appendChild(wrap);
+      }
+      modal.appendChild(imgs);
+
+      // tags
+      const tagRow = el('div', { style: 'margin-bottom:8px' });
+      const catTag = el('span', { className: 'detail-tag', style: `background:${color}22;color:${color};border:1px solid ${color}44` });
+      catTag.textContent = (CATS[item.category]?.icon || '') + ' ' + item.category;
+      tagRow.appendChild(catTag);
+      if (item.year) { const y = el('span', { style: 'color:var(--dim);font-size:12px' }); y.textContent = item.year; tagRow.appendChild(y); }
+      if (item.signageData) { const d = el('span', { className: 'detail-tag', style: 'background:rgba(126,184,164,0.1);color:#7EB8A4;border:1px solid rgba(126,184,164,0.3);font-size:11px' }); d.textContent = '✦ dual scan'; tagRow.appendChild(d); }
+      modal.appendChild(tagRow);
+
+      const h2 = el('div', { className: 'detail-h2' }); h2.textContent = item.title; modal.appendChild(h2);
+      if (item.brand) { const b = el('div', { className: 'detail-brand' }); b.textContent = item.brand; modal.appendChild(b); }
+      if (item.description) { const d = el('div', { className: 'detail-desc' }); d.textContent = item.description; modal.appendChild(d); }
+      if (item.rawText) {
+        const rb = el('div', { className: 'raw-box' });
+        rb.innerHTML = `<div class="raw-label">Extracted Label Text</div><pre>${item.rawText}</pre>`;
+        modal.appendChild(rb);
+      }
+      if (item.notes) {
+        const nb = el('div', { className: 'notes-box', style: `border-left-color:${color}` });
+        nb.innerHTML = `<div class="notes-label">Your Notes</div><p>${item.notes}</p>`;
+        modal.appendChild(nb);
+      }
+      if (item.lat) { const loc = el('div', { className: 'detail-loc' }); loc.textContent = `📍 ${item.lat.toFixed(4)}, ${item.lng.toFixed(4)}`; modal.appendChild(loc); }
+      const date = el('div', { className: 'detail-date' }); date.textContent = 'Saved ' + new Date(item.savedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }); modal.appendChild(date);
+
+      const delBtn = el('button', {
+        className: 'btn btn-danger', onclick: () => {
+          state.items = state.items.filter(i => i.id !== item.id);
+          saveItems(state.items);
+          state.modal = null;
+          render();
+        }
+      });
+      delBtn.textContent = 'Delete Item';
+      modal.appendChild(delBtn);
+
+      bg.appendChild(modal);
+      return bg;
+    }
+
+    // ── DOM helpers ──────────────────────────────────────────────────────────────
+    function el(tag, props = {}) {
+      const e = document.createElement(tag);
+      Object.entries(props).forEach(([k, v]) => {
+        if (k === 'style' && typeof v === 'string') e.style.cssText = v;
+        else if (k.startsWith('on')) e[k] = v;
+        else e[k] = v;
+      });
+      return e;
+    }
+    function txt(t) { return document.createTextNode(t); }
+    function fieldLabel(text) {
+      const l = el('label', { className: 'field-label' });
+      l.textContent = text;
+      return l;
+    }
+
+    // ── Boot ─────────────────────────────────────────────────────────────────────
+    getLocation();
+    checkServer();
+    setInterval(checkServer, 15000); // re-check every 15s
+    render();
+  </script>
+</body>
+
+</html>
